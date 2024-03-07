@@ -1,0 +1,9 @@
+#include "../include/TMP102.h"
+
+int main(void){
+  int ic2Handle;
+  int adapter=I2CBUS;
+  char fname[256];
+  
+  return;
+}

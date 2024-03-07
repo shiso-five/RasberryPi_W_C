@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+  <head>
+    <title> shingo no page </title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+<!--    <h1>Hello, World!</h1>
+    <h2>Welcome to my web site!</h2>
+    <h2>by Shingo Ogio</h2>    -->
+    <center><h1>Raspberry Pi LED ON/OFF </h1></center>
+    <center><h2>Web Server Example with 2 LEDs </h2></center>
+    <form>
+      <button name="LED0" button style="color:green" value="ON"  type="submit">LED0ON </button>
+      <button name="LED0" button style="color:red"   value="OFF" type="submit">LED0OFF</button>
+      <button name="LED1" button style="color:green" value="ON"  type="submit">LED1ON </button>
+      <button name="LED1" button style="color:red"   value="OFF" type="submit">LED1OFF</button> 
+    </form>
+    <form>
+      <button name="LED2" button style="color:green" value="ON"  type="submit">LED2ON </button>
+      <button name="LED2" button style="color:red"   value="OFF" type="submit">LED2OFF</button>
+      <button name="LED3" button style="color:green" value="ON"  type="submit">LED3ON </button>
+      <button name="LED3" button style="color:red"   value="OFF" type="submit">LED3OFF</button> 
+    </form>
+    <form>
+      <button name="LED4" button style="color:green" value="ON"  type="submit">LED4ON </button>
+      <button name="LED4" button style="color:red"   value="OFF" type="submit">LED4OFF</button>
+      <button name="LED5" button style="color:green" value="ON"  type="submit">LED5ON </button>
+      <button name="LED5" button style="color:red"   value="OFF" type="submit">LED5OFF</button> 
+    </form>
+    <form>
+      <button name="LED6" button style="color:green" value="ON"  type="submit">LED6ON </button>
+      <button name="LED6" button style="color:red"   value="OFF" type="submit">LED6OFF</button>
+      <button name="LED7" button style="color:green" value="ON"  type="submit">LED7ON </button>
+      <button name="LED7" button style="color:red"   value="OFF" type="submit">LED7OFF</button> 
+    </form>        
+    <form>
+      input a number between 0-255 ----> <input type="number", name="num"></input>
+    </form>
+    <form>
+      <button name="BUZ" button style="color:black" value="ON" type="submit">BUZON </button>             
+      <button name="BUZ" button style="color:black" value="OFF" type="submit">BUZOFF</button>       
+    </form>
+    <form>
+      <button name="EXIT" button style="color:black"   value="EXIT" type="submit">EXIT</button>
+    </form>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+#include "../include/DHT11.h"
+
+int main(void){
+
+  gpioInitialise();
+  time_sleep(1);
+  gpioSetMode(DHT_PIN, PI_OUTPUT);
+  gpioWrite(DHT_PIN, OFF);
+
+  while(1){
+    gpioWrite(DHT_PIN, ON);
+    time_sleep(1);
+    gpioWrite(DHT_PIN, OFF);
+    time_sleep(1);    
+  }
+  
+  return 0;
+}

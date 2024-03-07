@@ -1,0 +1,59 @@
+#include "../include/I2CExpander.h"
+
+int main(void){
+  unsigned int i2cHandle, reg=0;
+  char data[1024];
+  int Ndata=0;
+
+  memset(data, 0, sizeof(data));
+
+  gpioInitialise();
+  
+  if( (i2cHandle = i2cOpen(I2CBUS, SLAVEADDR, 0)) < 0 ){
+    fprintf(stderr, "ERROR: cannot open I2C\n");
+    exit(1);
+  }
+
+  reg = ADDR_IODIRA;
+  data[0] = 0b00000000;
+  Ndata = 1;
+  if( i2cWriteBlockData(i2cHandle, reg, data, Ndata) != 0){
+    fprintf(stderr, "ERROR: cannot i2cWriteBlockData() to the register %x\n", reg);
+  }  
+
+//  reg = ADDR_IODIRA;
+//  data[0] = 0b00000000;
+//  Ndata = 1;
+//  if( i2cWriteBlockData(i2cHandle, reg, data, Ndata) != 0){
+//    fprintf(stderr, "ERROR: cannot i2cWriteBlockData() to the register %x\n", reg);
+//  }
+//  while(1){
+//    reg = ADDR_GPIOA;
+//    //    data[0] = 0b00000001;
+//    data[0] = 0xff;    
+//    Ndata = 1;
+//    if( i2cWriteI2CBlockData(i2cHandle, reg, data, Ndata) != 0){
+//      fprintf(stderr, "ERROR: cannot i2cWriteBlockData() to the register %x\n", reg);
+//    }    
+//    time_sleep(1);
+//
+//    reg = ADDR_GPIOA;
+////    data[0] = 0b00000000;
+//    data[0] = 0x00;    
+//    Ndata = 1;
+//    if( i2cWriteI2CBlockData(i2cHandle, reg, data, Ndata) != 0){
+//      fprintf(stderr, "ERROR: cannot i2cWriteBlockData() to the register %x\n", reg);
+//    }    
+//    time_sleep(1);
+//  }
+
+  if( i2cClose(i2cHandle) != 0 ){
+    fprintf(stderr, "ERROR: cannot close I2C handle %d\n", i2cHandle);
+    exit(1);
+  }
+
+  gpioTerminate();
+
+  
+  return 9;
+}

@@ -1,0 +1,17 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#include <pigpio.h>
+
+#define ON  1
+#define OFF 0
+#define BUZ 11
+
+void Configure(void);
+
+int main(void){
+  
+  return 0;
+}
+

@@ -1,0 +1,18 @@
+#include "../include/test.h"
+
+int main(void){
+  struct LCD lcd;
+  int i;
+  LCDInit(&lcd);
+  
+//  LCDPrintRSPin(&lcd);
+//  for(i=0;i<8;i++){
+//    LCDPrintDataPin(&lcd, i);
+//  }
+
+  LCDWrite(&lcd, 65, 1);
+
+  LCDTerm(&lcd);
+  
+  return 0;
+}

@@ -1,0 +1,124 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/fcntl.h>
+#include <arpa/inet.h>
+
+#define HTTPPORT      54321
+#define BUFFSIZE      1024
+#define LARGEBUFFSIZE 65536
+
+int httpd(int, struct sockaddr_in);
+int SendErrMsg2Clnt(int, char*);
+
+int main(void){
+  int servSock, clntSock;
+  struct sockaddr_in servAddr, clntAddr;
+  unsigned int clntAddrLen;
+
+  if( (servSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0 ){
+    fprintf(stderr, "ERROR: socket() failed\n");
+  }
+
+  memset(&servAddr, 0, sizeof(servAddr));
+  servAddr.sin_family      = AF_INET;
+  servAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  servAddr.sin_port        = htons(HTTPPORT);
+  if( bind(servSock, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0 ){
+    fprintf(stderr, "bind() failed\n");
+    return 1;
+  }
+  
+  if( listen(servSock, 5) < 0){
+    fprintf(stderr, "listen() failed\n");
+    return 1;
+  }
+
+  for(;;){
+    clntAddrLen = sizeof(clntAddr);
+    if( (clntSock = accept(servSock, (struct sockaddr *)&clntAddr, &clntAddrLen)) < 0 ){
+      fprintf(stderr, "ERROR: accept() failed\n");
+      break;
+    }
+    httpd(clntSock, clntAddr);
+    close(clntSock);
+  }
+
+  close(servSock);
+  
+  return 0;
+}
+
+int httpd(int clntSock, struct sockaddr_in clntAddr){
+  char recvStr[BUFFSIZE], errMsg[BUFFSIZE];
+  char buf[LARGEBUFFSIZE];
+  int  indx=0;
+  char methName[16], uriAddr[256], httpVer[64], path[256], urlPara[64];
+  int  readFileDisc, readLen;
+  FILE *fp;
+  int  n=0;
+  
+  //  while( recv(clntSock, recvStr, BUFFSIZE, 0) > 0 ){
+  while(n<1000){
+    recv(clntSock, recvStr, BUFFSIZE, 0);
+    snprintf(buf+indx, LARGEBUFFSIZE-indx, "%s", recvStr);
+    indx+=strlen(recvStr);
+    sscanf(buf, "%s %s %s", methName, uriAddr, httpVer);
+//    fprintf(stdout, "strlen(methName)=%lu strlen(uriAddr)=%lu strlen(httpVer)=%lu\n", strlen(methName), strlen(uriAddr), strlen(httpVer));
+//    fprintf(stdout, "methName=%s uriAddr=%s httpVer=%s\n", methName, uriAddr, httpVer);
+    if( strlen(methName)!=0 && strlen(uriAddr)!=0 && strlen(httpVer)!=0){
+      break;
+    }
+    n++;
+  }
+  //  fprintf(stdout, "buf=%s\n", buf);
+
+  if( strcmp(methName, "GET") != 0 ){
+    SendErrMsg2Clnt(clntSock, "501 Not Implemented\n");
+    return 1;
+  }
+
+  fprintf(stdout, "http request: '%s %s %s' by %s:%u\n", methName, uriAddr, httpVer, inet_ntoa(clntAddr.sin_addr), clntAddr.sin_port);
+
+//  if( readFileDisc = open(uriAddr+1, O_RDONLY) == -1){
+//    SendErrMsg2Clnt(clntSock, "404 Not Found\n");    
+//  }
+//
+//  while( (readLen = recv(readFileDisc, buf, LARGEBUFFSIZE, 0)) > 0 ){
+//    //    send(clntSock, buf, strlen(buf), 0);
+//    send(clntSock, buf, readLen, 0);
+//  }
+//  close(readFileDisc);
+
+  if( strchr(uriAddr, (int)'?') != NULL ){
+    //    sscanf(uriAddr, "%s?%s", path, urlPara);
+    strcpy(path, strtok(uriAddr, "?"));
+    strcpy(urlPara, strtok(NULL, "?"));    
+    //    fprintf(stdout, "para=%s urlPara=%s\n", path, urlPara);
+  }
+  else{
+    strcpy(path, uriAddr);
+  }  
+  if( (fp=fopen(path+1,"r")) == NULL ){
+    SendErrMsg2Clnt(clntSock, "404 Not Found\n");        
+  }
+  
+  snprintf(buf, LARGEBUFFSIZE, "%s 200 OK!\r\n", httpVer); send(clntSock, buf, strlen(buf), 0);
+  snprintf(buf, LARGEBUFFSIZE, "text/html\r\n");           send(clntSock, buf, strlen(buf), 0);
+  snprintf(buf, LARGEBUFFSIZE, "\r\n");                    send(clntSock, buf, strlen(buf), 0);  
+
+  while( fgets(buf, LARGEBUFFSIZE, fp) != NULL ){
+    send(clntSock, buf, strlen(buf), 0);
+    //    fprintf(stdout, "%s\n", buf);
+  } 
+  fclose(fp);
+
+  return 0;
+}
+
+int SendErrMsg2Clnt(int clntSock, char* msg){
+    fprintf(stderr, "%s", msg);
+    return send(clntSock, msg, strlen(msg), 0);      
+}

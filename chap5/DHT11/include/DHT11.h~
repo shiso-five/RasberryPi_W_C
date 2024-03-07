@@ -1,0 +1,6 @@
+#include <stdio.h>
+#include <pigpio.h>
+
+#define DHT_PIN 11
+#define ON      1
+#define OFF     0

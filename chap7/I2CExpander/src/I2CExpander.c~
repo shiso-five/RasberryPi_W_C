@@ -1,0 +1,13 @@
+#include <../include/I2CExpander.h>
+
+int main(void){
+  int i2cHandle;
+
+  gpioInitialise();
+
+
+  gpioTerminate();
+
+  
+  return 9;
+}

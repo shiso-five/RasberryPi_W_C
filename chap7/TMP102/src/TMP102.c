@@ -24,7 +24,7 @@ int main(void){
     }
 
     read(i2cHandle, buf, 2);
-    temp = (buf[0]<<4) + buf[1];
+    temp = (buf[0]<<4) + (buf[1]>>4);
 
     if(temp > 0x7ff){
       temp = (~temp) & 0xffff;

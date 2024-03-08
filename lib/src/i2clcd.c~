@@ -1,0 +1,363 @@
+#include "../include/i2clcd.h"
+
+void I2CLCDInit(struct I2CLCD *lcd){
+  char fname[256];
+  
+  lcd->LCD_CLR               =0;      /* DB0: clear display                  */
+  lcd->LCD_HOME              =1;      /* DB1: return to home position        */
+  lcd->LCD_ENTRY_MODE        =2;      /* DB2: set entry mode                 */
+  lcd->LCD_ENTRY_INC         =1;      /*   DB1: 1=increment, 0=decrement     */
+  lcd->LCD_ENTRY_SHIFT       =0;      /*   DB2: 1=display shift on           */
+  lcd->LCD_ON                =3;      /* DB3: turn lcd/cursor on             */
+  lcd->LCD_ON_DISPLAY        =2;      /*   DB2: turn display on              */
+  lcd->LCD_ON_CURSOR         =1;      /*   DB1: turn cursor on               */
+  lcd->LCD_ON_BLINK          =0;      /*     DB0: blinking cursor ?          */
+  lcd->LCD_SHIFT              =4;      /* DB4: move cursor/display            */
+  lcd->LCD_SHIFT_DISP         =3;      /*   DB3: move display (0-> cursor) ?  */
+  lcd->LCD_SHIFT_RIGHT        =2;      /*   DB2: move right (0-> left) ?      */
+  lcd->LCD_FUNCTION          =5;      /* DB5: function set                   */
+  lcd->LCD_FUNCTION_8BIT     =4;      /*   DB4: set 8BIT mode (0->4BIT mode) */
+  lcd->LCD_FUNCTION_2LINES   =3;      /*   DB3: two lines (0->one line)      */
+  lcd->LCD_FUNCTION_10DOTS   =2;      /*   DB2: 5x10 font (0->5x7 font)      */
+  lcd->LCD_CGRAM             =6;      /* DB6: set CG RAM address             */
+  lcd->LCD_DDRAM             =7;      /* DB7: set DD RAM address             */
+  lcd->LCD_BUSY              =7;      /* DB7: LCD is busy                    */  
+  
+  lcd->RS           = 0;
+  lcd->RW           = 1;
+  lcd->E            = 2;
+  lcd->BL           = 3;
+  lcd->dataLine[0]  = 4;
+  lcd->dataLine[1]  = 5;
+  lcd->dataLine[2]  = 6;
+  lcd->dataLine[3]  = 7;
+
+  lcd->slaveAddr = PCF8574_ADDR;
+  int adapter        = I2CBUS;
+  
+  snprintf(fname, 255, "/dev/i2c-%d", adapter);
+  if( (lcd->i2cHandle = open(fname, O_RDWR)) < 0 ){
+    fprintf(stderr, "ERROR: cannot open() I2C handler\n");
+    exit(1);
+  }
+
+  if( ioctl(lcd->i2cHandle, I2C_SLAVE, lcd->slaveAddr) < 0 ){
+    fprintf(stderr, "ERROR: cannot ioctl() \n");
+    exit(1);
+  }
+  
+  usleep(100000); // more than 15 ms
+  //  sleep(1);
+  I2CLCDFuncSet(lcd, 1, 0, 0);
+  usleep(100000);  //more than 4.1 ms
+  //  sleep(1);  
+  I2CLCDFuncSet(lcd, 1, 0, 0);
+  usleep(100000);  //more than 100 us
+  //  sleep(1);  
+  I2CLCDFuncSet(lcd, 1, 0, 0);
+  
+  I2CLCDFuncSet(lcd, 0, 1, 1);
+  I2CLCDFuncSet(lcd, 0, 1, 0);
+  
+  I2CLCDDispOn(lcd, 0, 0, 0);
+  I2CLCDClear(lcd);
+  I2CLCDHome(lcd);
+  I2CLCDEntryModeSet(lcd, 1, 0);
+
+  usleep(100000);
+  //  sleep(1);  
+  I2CLCDDispOn(lcd, 1, 1, 1);
+  I2CLCDClear(lcd);
+  I2CLCDHome(lcd);
+
+  I2CLCDBLHigh(lcd);    
+
+  return;
+}
+
+void I2CLCDTerm(struct I2CLCD *lcd){
+  I2CLCDHome(lcd);
+  I2CLCDClear(lcd);
+  
+  return;
+}
+
+void    I2CLCDCommand(struct I2CLCD *lcd, uint8_t cmd){
+  I2CLCDWaitBusy(lcd);
+  I2CLCDWrite(lcd, cmd, 0);
+  return;
+}
+
+void I2CLCDClear(struct I2CLCD *lcd){
+  printf("clear begin\n");  
+  I2CLCDCommand(lcd, 1<<lcd->LCD_CLR);
+  printf("clear end\n");    
+}
+
+void I2CLCDHome(struct I2CLCD *lcd){
+  printf("home begin\n");
+  I2CLCDCommand(lcd, 1<<lcd->LCD_HOME);
+  printf("home end\n");
+}
+
+void I2CLCDEntryModeSet(struct I2CLCD *lcd, uint8_t IorD, uint8_t S){
+  printf("EntryModeSet begin. I/D=%u, S=%u\n", IorD, S);  
+  uint8_t cmd=0;
+  cmd |= 1<<lcd->LCD_ENTRY_MODE;
+  if(IorD){
+    cmd |= 1<<lcd->LCD_ENTRY_INC;
+  }
+  if(S){
+    cmd |= 1<<lcd->LCD_ENTRY_SHIFT;
+  }
+
+  I2CLCDCommand(lcd, cmd);
+
+  printf("EntryModeSet end\n");
+  
+  return;
+}
+
+void I2CLCDDispOn(struct I2CLCD *lcd, uint8_t D, uint8_t C, uint8_t B){
+  printf("DispOn begin. D=%u, C=%u, B=%u\n", D, C, B);
+  uint8_t cmd = 0;
+  cmd |= 1<<lcd->LCD_ON;
+  if(D){
+    cmd |= 1<<lcd->LCD_ON_DISPLAY;
+  }
+  if(C){
+    cmd |= 1<<lcd->LCD_ON_CURSOR;
+  }
+  if(B){
+    cmd |= 1<<lcd->LCD_ON_BLINK;
+  }
+
+  I2CLCDCommand(lcd, cmd);
+
+  printf("DispOn end\n");
+  
+  return;
+}
+
+void I2CLCDShift(struct I2CLCD *lcd, uint8_t CorD, uint8_t RorL){
+  printf("Shift begin. C/D=%u, R/L=%u\n", CorD, RorL);
+  uint8_t cmd=0;
+
+  cmd |= 1<<lcd->LCD_SHIFT;
+
+  if(CorD){
+    cmd |= 1<<lcd->LCD_SHIFT_DISP;
+  }
+  if(RorL){
+    cmd |= 1<<lcd->LCD_SHIFT_RIGHT;
+  }
+
+  I2CLCDCommand(lcd, cmd);
+
+  printf("Shift end\n");
+  
+  return;
+}
+void I2CLCDFuncSet(struct I2CLCD *lcd, uint8_t DL, uint8_t N, uint8_t F){
+  printf("FuncSet begin. DL=%u, N=%u, F=%u\n", DL, N, F);
+  uint8_t cmd = 0;
+  cmd |= 1<<lcd->LCD_FUNCTION;
+  if(DL){ //8-bit mode of 4-bit mode
+    cmd |= 1<<lcd->LCD_FUNCTION_8BIT;     
+  }
+  if(N){ //2lines or 1lines
+    cmd |= lcd->LCD_FUNCTION_2LINES;
+  }
+  if(F){ //dots parameter
+    cmd |= lcd->LCD_FUNCTION_10DOTS;
+  }
+  
+  I2CLCDCommand(lcd, cmd);
+
+  printf("FuncSet end\n");
+  
+  return;
+}
+
+void I2CLCDSetCGRAMAddr(struct I2CLCD *lcd, uint8_t addr){
+  uint8_t cmd=0;
+
+  cmd |= 1<<lcd->LCD_CGRAM;
+  cmd |= addr;
+
+  I2CLCDCommand(lcd, cmd);
+  
+  return;
+}
+void I2CLCDSetDDRAMAddr(struct I2CLCD *lcd, uint8_t addr){
+  uint8_t cmd=0;
+
+  cmd |= 1<<lcd->LCD_DDRAM;
+  cmd |= addr;
+
+  I2CLCDCommand(lcd, cmd);
+  
+  return;
+}
+
+void I2CLCDEToggle(struct I2CLCD *lcd){
+  //  memset(lcd->PIN_PCF8574, 0, sizeof(lcd->PIN_PCF8574));  
+  I2CLCDEHigh(lcd);
+  usleep(10000);
+  //  sleep(1);  
+  I2CLCDELow(lcd);
+
+  return;
+}
+
+void I2CLCDWrite(struct I2CLCD *lcd, uint8_t data, uint8_t rs){
+  int i;
+  printf("I2CLCDWrite() begin\n");
+  
+//  memset(&(lcd->PIN_PCF8574), 0, sizeof(lcd->PIN_PCF8574));
+//  I2CLCDBLHigh(lcd);  
+  
+  if(rs){ //instruction register
+    I2CLCDRSHigh(lcd);
+  }
+  else{ //data register
+    I2CLCDRSLow(lcd);    
+  }
+  I2CLCDRWLow(lcd);      
+
+  for(i=7;i>=0;i--){
+    if(data & 1<<i){
+      lcd->PIN_PCF8574 |=  (1 << lcd->dataLine[i%4]); //ON
+    }
+    else{
+      lcd->PIN_PCF8574 &= ~(1 << lcd->dataLine[i%4]); //OFF           
+    }
+    if(i%4==0){
+      I2CLCDEToggle(lcd);
+    }
+  }
+
+  printf("I2CLCDWrite() end\n");  
+  
+  return;
+}
+
+uint8_t I2CLCDRead(struct I2CLCD *lcd, uint8_t rs){
+  uint8_t data=0;
+
+//  memset(&(lcd->PIN_PCF8574), 0, sizeof(lcd->PIN_PCF8574));
+//  I2CLCDBLHigh(lcd);  
+  
+  if(rs){ //instruction register
+    I2CLCDRSHigh(lcd);
+  }
+  else{ //data register
+    I2CLCDRSLow(lcd);
+  }
+  I2CLCDRWHigh(lcd);
+
+  I2CLCDEHigh(lcd); 
+  usleep(10000);
+
+  uint8_t rd=0;
+//  read(lcd->i2cHandle, &(lcd->PIN_PCF8574), 1);
+//  data |= (0xf0 & lcd->PIN_PCF8574);
+  read(lcd->i2cHandle, &rd, 1);
+  data |= (0xf0 & rd);  
+
+  I2CLCDELow(lcd);    
+  usleep(10000);
+
+  I2CLCDEHigh(lcd);    
+  usleep(10000);
+//  read(lcd->i2cHandle, &(lcd->PIN_PCF8574), 1);
+//  data |= (0xf0 & lcd->PIN_PCF8574);  
+  rd=0;
+  read(lcd->i2cHandle, &rd, 1);
+  data |= (0xf0 & rd) >> 4;  
+  
+  return data;
+}
+
+uint8_t I2CLCDWaitBusy(struct I2CLCD *lcd){
+  uint8_t c;
+  while( (c=I2CLCDRead(lcd, 0)) & (1 << lcd->LCD_BUSY) ){
+    usleep(1000);
+  }
+  usleep(10000);
+
+  return I2CLCDRead(lcd, 0);
+}
+
+void    I2CLCDRSLow(struct I2CLCD *lcd){
+  lcd->PIN_PCF8574 &= ~(1 << lcd->RS);
+  write(lcd->i2cHandle, &(lcd->PIN_PCF8574), 1);
+  return;
+}
+void    I2CLCDRSHigh(struct I2CLCD *lcd){
+  lcd->PIN_PCF8574 |= (1 << lcd->RS);
+  write(lcd->i2cHandle, &(lcd->PIN_PCF8574), 1);  
+  return;
+}
+void    I2CLCDRWLow(struct I2CLCD *lcd){
+  lcd->PIN_PCF8574 &= ~(1 << lcd->RW);
+  write(lcd->i2cHandle, &(lcd->PIN_PCF8574), 1);
+  return;  
+}
+void    I2CLCDRWHigh(struct I2CLCD *lcd){
+  lcd->PIN_PCF8574 |= (1 << lcd->RW);
+  write(lcd->i2cHandle, &(lcd->PIN_PCF8574), 1);  
+  return;  
+}
+void    I2CLCDELow(struct I2CLCD *lcd){
+  printf("log: %x, %x,  %x\n", ~(1 << lcd->E), lcd->PIN_PCF8574, lcd->PIN_PCF8574 & ~(1 << lcd->E));
+  lcd->PIN_PCF8574 &= ~(1 << lcd->E);
+  write(lcd->i2cHandle, &(lcd->PIN_PCF8574), 1);
+  return;    
+}
+void    I2CLCDEHigh(struct I2CLCD *lcd){
+  lcd->PIN_PCF8574 |= (1 << lcd->E);
+  write(lcd->i2cHandle, &(lcd->PIN_PCF8574), 1);  
+  return;  
+}
+void    I2CLCDBLLow(struct I2CLCD *lcd){
+  lcd->PIN_PCF8574 &= ~(1 << lcd->BL);
+  write(lcd->i2cHandle, &(lcd->PIN_PCF8574), 1);
+  return;    
+}
+void    I2CLCDBLHigh(struct I2CLCD *lcd){
+  printf("I2CLCDBLHigh() before %x\n", lcd->PIN_PCF8574);    
+  lcd->PIN_PCF8574 |= (1 << lcd->BL);  
+  write(lcd->i2cHandle, &(lcd->PIN_PCF8574), 1);
+  printf("I2CLCDBLHigh() after %x\n", lcd->PIN_PCF8574);  
+  return;  
+}
+
+void    I2CLCDPutChar(struct I2CLCD *lcd, char c){
+  I2CLCDWrite(lcd, c, 1);
+  return;
+}
+void    I2CLCDPrint(struct I2CLCD *lcd, char *str){
+  int i;
+
+  for(i=0;i<strlen(str);i++){
+    I2CLCDPutChar(lcd, str[i]);    
+  }
+  
+  return;
+}
+void    I2CLCDGoToXY(struct I2CLCD *lcd, uint8_t x, uint8_t y){
+  if( (0>x) || (x>=40) || (0>y) || (y>=2) ){
+    fprintf(stderr, "ERROR: invalid position. must be 0<=x<40 and 0<=y<2\n");
+    return;
+  }
+  if(y==0){
+    I2CLCDSetDDRAMAddr(lcd, x);
+  }
+  else if(y==1){
+    I2CLCDSetDDRAMAddr(lcd, x+0x40);
+  }  
+  
+  return;
+}
+

@@ -106,6 +106,8 @@ void LCDEntryModeSet(struct LCD* lcd, uint8_t IorD, uint8_t S){
   if(S){
     cmd |= 1<<lcd->LCD_ENTRY_SHIFT;
   }
+
+  LCDCommand(lcd, cmd);  
 }
 
 void LCDDispOn(struct LCD* lcd, uint8_t D, uint8_t C, uint8_t B){
@@ -250,10 +252,15 @@ uint8_t LCDRead(struct LCD* lcd, uint8_t rs){
     rd = gpioRead(lcd->dataPin[i]);
     data |= rd << i;
     //    printf("bit=%d rd=%u, ", i, rd); 
-    if(i%4==0){
-      gpioWrite(lcd->ctrlPin[2], OFF);      
+    if(i==4){
+      gpioWrite(lcd->ctrlPin[2], OFF);
+      time_sleep(0.01);              
+      gpioWrite(lcd->ctrlPin[2], ON);
+      time_sleep(0.01);        
     }
   }
+  gpioWrite(lcd->ctrlPin[2], OFF);
+  time_sleep(0.01);                
   //  printf("\n");
 
   gpioWrite(lcd->ctrlPin[2], OFF);

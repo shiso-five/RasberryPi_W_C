@@ -1,0 +1,66 @@
+#include "../include/I2CLCD.h"
+
+int main(void){
+  struct I2CLCD lcd;
+  char str[1024];
+  char x[256], y[256];
+
+  I2CLCDInit(&lcd);
+
+  while(1){
+    printf(">");
+    scanf("%s", str);
+    if(!strcmp(str, "quit")){
+      break;
+    }
+    else if(!strcmp(str, "clear")){
+      I2CLCDClear(&lcd);
+    }
+    else if(!strcmp(str, "home")){
+      I2CLCDHome(&lcd);
+    }        
+    else if(!strcmp(str, "dr")){
+      I2CLCDShift(&lcd, 1, 1);      
+    }
+    else if(!strcmp(str, "dl")){
+      I2CLCDShift(&lcd, 1, 0);
+    }
+    else if(!strcmp(str, "cr")){
+      I2CLCDShift(&lcd, 0, 1);      
+    }
+    else if(!strcmp(str, "cl")){
+      I2CLCDShift(&lcd, 0, 0);
+    }
+    else if(str[0]=='0'&&str[1]=='x'){
+      I2CLCDWrite(&lcd, (uint8_t)strtol(str+2, NULL, 16), 1);
+    }
+    else if(str[0]=='0'&&str[1]=='b'){
+      I2CLCDWrite(&lcd, (uint8_t)strtol(str+2, NULL, 2), 1);
+    }
+    else if( str == strstr(str, "print") ){
+      I2CLCDPrint(&lcd, str+5);
+    }
+    else if( str == strstr(str, "setcgram") ){
+      I2CLCDSetCGRAMAddr(&lcd, (uint8_t)strtol(str+8, NULL, 16));
+    }    
+    else if( str == strstr(str, "setddram") ){
+      I2CLCDSetDDRAMAddr(&lcd, (uint8_t)strtol(str+8, NULL, 16));      
+    }
+    else if( !strcmp(str, "goto") ){
+      printf("x?>");
+      scanf("%s", x);
+      printf("y?>");
+      scanf("%s", y);
+      I2CLCDGoToXY(&lcd, (uint8_t)strtol(x,NULL,10), (uint8_t)strtol(y,NULL,10));
+    }    
+    else{
+      I2CLCDPutChar(&lcd, str[0]);
+    }        
+  }
+  printf("\n");
+
+  I2CLCDTerm(&lcd);
+  
+  return 0;
+}
+

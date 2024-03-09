@@ -1,0 +1,75 @@
+#include "../include/HeaterONOFFCtrl.h"
+
+int main(void){
+  struct I2CLCD lcd;
+  struct tm *timeInfo;
+  time_t timer;
+  char rowUpper[256], rowLower[256], currentDate[16], currentTime[12];
+  float deg;
+
+  float degPreset=35.;
+
+//  FILE *fp;
+//  fp = fopen("/nfs/temp.txt", "w");  
+  time_t timeInit = 0;
+  int fp;
+  char buf[32];  
+  fp = open("/nfs/temp.txt", O_WRONLY|O_TRUNC);
+  
+  I2CLCDInit(&lcd);
+  I2CLCDDispOn(&lcd, 1, 0, 0);
+
+  gpioInitialise();
+  gpioSetMode(SSR, PI_OUTPUT);
+  
+  while(1){ 
+
+    deg = ReadTemp(lcd.i2cHandle);
+
+    //control heater with SSR
+    if(deg < degPreset){
+      gpioWrite(SSR, 1);
+    }
+    else{
+      gpioWrite(SSR, 0);
+    }
+
+    //prepare controlling of LCD
+    if( ioctl(lcd.i2cHandle, I2C_SLAVE, lcd.slaveAddr) < 0 ){
+      fprintf(stderr, "ERROR: cannot ioctl() \n");
+      exit(1);
+    }    
+
+    //Display on LCD
+    memset(rowUpper, '\0', sizeof(rowUpper));
+    memset(rowLower, '\0', sizeof(rowLower));
+
+    time(&timer);
+    timer += 9*3600;
+    timeInfo = gmtime(&timer);
+
+    strftime(currentDate, 16, "20%y-%m-%d",  timeInfo);
+    strftime(currentTime, 12, "%Hh %Mm %Ss", timeInfo);
+    
+    snprintf(rowUpper, 256, "%s %3.1fC", currentDate, deg);
+    snprintf(rowLower, 256, "%s", currentTime);    
+
+    I2CLCDGoToXY(&lcd, 0, 0);
+    I2CLCDPrint(&lcd, rowUpper);
+
+    I2CLCDGoToXY(&lcd, 0, 1);
+    I2CLCDPrint(&lcd, rowLower);
+
+    //dump to file
+    if(timeInit==0){
+      timeInit = timer;
+    }
+    memset(buf, '\0', sizeof(buf));
+    snprintf(buf, sizeof(buf), "%ld %f\n\0", timer-timeInit, deg);
+    write(fp, buf, strlen(buf));
+
+    //    usleep(400000);
+  }
+  
+  return 0;
+}

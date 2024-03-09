@@ -1,0 +1,19 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <pigpio.h>
+
+#define SSR 11
+
+int main(void){
+  gpioInitialise();
+  gpioSetMode(SSR, PI_OUTPUT);
+
+  gpioWrite(SSR, 0);
+  while(1){
+    time_sleep(1.);
+  }
+
+  gpioWrite(SSR, 0);
+
+  return 0;
+}
